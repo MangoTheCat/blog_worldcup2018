@@ -1,24 +1,23 @@
 #' Find winners
 #' 
 #' Find the winners at various stages, round of 16, quarter-finals, semi-finals and final.
-#' TODO: To be engineered (I steped into it and stepped back) 
+#' TODO: To tidy up. I steped into it and stepped out. 
 #' 
 #' @export
-find_group_winners <- function(teams, group_match_data, play_fun, ...) {
+find_group_winners <- function(team_data, group_match_data, play_fun, train_data = NULL, ...) {
   
   ## Create a copy of the matches that we can fill out
   group_match_results <- group_match_data
   
   ## Simulate each match that hasn't already been played  
-  #set.seed(000)
   group_results <- play_game(
-    teams = teams,
-    team1 = teams$number[match(group_match_data$team1, teams$name)], # map from name to number
-    team2 = teams$number[match(group_match_data$team2, teams$name)],
+    team_data,
+    team_data$number[match(group_match_data$team1, team_data$name)], # map from name to number
+    team_data$number[match(group_match_data$team2, team_data$name)],
     play_fun = play_fun,
+    train_data = train_data,
     musthavewinner = FALSE,
-    ...
-  )
+    ...)
   
   #play_foo <- function(team1, team2){
   #  goals1 <- rpois(length(team1), lambda = normalgoals / 2)
@@ -65,39 +64,47 @@ find_group_winners <- function(teams, group_match_data, play_fun, ...) {
   group_match_results$pointsForB <- with(group_match_results, 3*(goals1<goals2)+1*(goals1==goals2))
   
   ## Okay the casing is a bit of a mess here. I do apologize.
-  teams$points <- 
-    sapply(teams$name, function(i) { sum(group_match_results[c("pointsForA", "pointsForB")][i == group_match_data[c("team1","team2")]]) })
-  teams$goalsFore <- sapply(teams$name, function(i) { sum(group_match_results[c("goals1", "goals2")][i == group_match_data[c("team1","team2")]]) })
+  team_data$points <- 
+    sapply(team_data$name, function(i) { sum(group_match_results[c("pointsForA", "pointsForB")][i == group_match_data[c("team1","team2")]]) })
+  team_data$goalsFore <- sapply(team_data$name, function(i) { sum(group_match_results[c("goals1", "goals2")][i == group_match_data[c("team1","team2")]]) })
   
-  teams$goalsAgainst <- sapply(teams$name, function(i) { sum(group_match_results[c("goals2", "goals2")][i == group_match_data[c("team1","team2")]]) })
+  team_data$goalsAgainst <- sapply(team_data$name, function(i) { sum(group_match_results[c("goals2", "goals2")][i == group_match_data[c("team1","team2")]]) })
   
-  teams$goalsDifference <- teams$goalsFore-teams$goalsAgainst
+  team_data$goalsDifference <- team_data$goalsFore-team_data$goalsAgainst
   
   
   # And here we find the winners within each group
-  teams %>% 
+  goals <- team_data %>% 
     group_by(group) %>% 
     arrange(desc(points), desc(goalsDifference), desc(goalsFore)) %>% 
     mutate(groupRank = row_number()) %>% 
     ungroup() %>%
     arrange(group, groupRank)
+  
+  winners <- goals %>% 
+    filter(groupRank %in% c(1, 2)) %>%
+    select(number) %>% 
+    flatten_int()
+  
+  return(list(winners = winners, goals = goals))
+  
 }
 
 #' @export
-find_knockout_winners <- function(teams, match_data, play_fun, ...) {
+find_knockout_winners <- function(team_data, match_data, play_fun, train_data = NULL, ...) {
   ## Get the results
   results <- play_game(
-    teams,
+    team_data,
     match_data[, 1], # is numeric 
     match_data[, 2], # is numeric
     play_fun = play_fun,
     musthavewinner = TRUE,
+    #normalgoals = 2.75,
+    train_data = train_data,
     ...
   )
   
   ## Now form the goals
-  #goals <- cbind(match_data, results) %>% 
-  #  data.frame()
   goals <- data.frame(match_data, results) %>% 
     setNames(c("team1", "team2", "goals1", "goals2"))
   

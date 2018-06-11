@@ -62,8 +62,8 @@ plot_top_scorer <- function(result_stats){
   col_idx <- result_stats$team %in% result_stats$team[(nrow(result_stats)-3):nrow(result_stats)]
   
   ggplot(result_stats, aes(x=team, y=goals)) + 
-    geom_segment(aes(x=team, xend=team, y=0, yend=goals), color=ifelse(col_idx, "#BE3D28", "#F8C09F"), size=1 ) +
-    geom_point(color=ifelse(col_idx, "#BE3D28", "#F8C09F"), size=2) +
+    geom_segment(aes(x=team, xend=team, y=0, yend=goals), color="#BE3D28", size=1 ) +#ifelse(col_idx, "#BE3D28", "#F8C09F")
+    geom_point(color="#F8C09F", size=2) + #ifelse(col_idx, "#BE3D28", "#F8C09F")
     theme_light() +
     coord_flip() +
     theme(

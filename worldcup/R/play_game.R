@@ -9,21 +9,18 @@
 #' 
 #' @rdname 
 #' @export
-play_game <- function(play_fun, 
-                      musthavewinner=FALSE, ...) {#teams, normalgoals = 2.75, team1, team2, 
-  ## Sanity checks
-  #if (length(team1) != length(team2))
-  #  stop("Lengths of team should be the same")
-  #
-  #if (any(team1==team2))
-  #  stop("A team cannot play against itself")
+play_game <- function(team_data, play_fun, team1, team2, 
+                      musthavewinner=FALSE, normalgoals = 2.75, ...) {
+  # Sanity checks
+  if (length(team1) != length(team2))
+    stop("Lengths of team should be the same")
+  
+  if (any(team1==team2))
+    stop("A team cannot play against itself")
   
   play_fun <- match.fun(play_fun)
   
-  #result <- play_fun(teams = teams, team1 = team1, team2 = team2, 
-  #                   normalgoals = normalgoals, ...)#  normalgoals,
-  result <- play_fun(...)#normalgoals,team1, team2, teams, 
-  
+  result <- play_fun(team_data, team1, team2, normalgoals, ...)
   
   # If we MUST have a winner then one simple trick is to add a random goal 
   # to one of the two teams that have the same score. Penalty goals seem rather 
@@ -36,10 +33,8 @@ play_game <- function(play_fun,
 }
 
 #' @rdname
-play_fun_simplest <- function(teams = NULL, team1, team2, normalgoals = 2.75) {
-  #assert_that(length(team1) == length(team2), 
-  #            msg = "Lengths of team should be the same")
-  
+play_fun_simplest <- function(team_data = NULL, team1, team2, normalgoals = 2.75, train_data = NULL) {
+
   ## Simplest version.
   ## All teams are equal - two independet poisson regressions
   Agoals <- rpois(length(team1), lambda = normalgoals / 2)
@@ -49,14 +44,12 @@ play_fun_simplest <- function(teams = NULL, team1, team2, normalgoals = 2.75) {
 }
 
 #' @rdname
-play_fun_skellam <- function(teams, team1, team2, normalgoals = 2.75){
-  assert_that(length(team1) == length(team2), 
-              msg = "Lengths of team should be the same")
-  
+play_fun_skellam <- function(team_data, team1, team2, normalgoals = 2.75, ...){
+
   ## Skellam distribution
   ## Parameters based on ratings from betting website 
-  p1 <- .91/teams$rating[team1]
-  p2 <- .91/teams$rating[team2]
+  p1 <- .91/team_data$rating[team1]
+  p2 <- .91/team_data$rating[team2]
   
   prob <- p1 / (p1 + p2)
   lambdaA <- FindParameter(prob)
@@ -67,12 +60,10 @@ play_fun_skellam <- function(teams, team1, team2, normalgoals = 2.75){
 }
 
 #' @rdname
-play_fun_elo <- function(teams, team1, team2, ...){
-  assert_that(length(team1) == length(team2), 
-              msg = "Lengths of team should be the same")
-  
+play_fun_elo <- function(team_data, team1, team2, ...){
+
   result <- t(sapply(seq_len(length(team1)), function(i) {
-    AWinProb <- 1/(1 + 10^((teams$elo[team2[i]] - teams$elo[team1[i]])/400))
+    AWinProb <- 1/(1 + 10^((team_data$elo[team2[i]] - team_data$elo[team1[i]])/400))
     myres <- rbinom(1, size=1, prob=AWinProb)
     fakegoals <- c(1,0)  
     if (myres==0)
@@ -88,48 +79,40 @@ play_fun_elo <- function(teams, team1, team2, ...){
   ## vectorization in case the elo ranking should be updated after each match.
 }
 
-# train_double_poisson(teams = team_data, train_data = wcmatches_train)
-
-#' @rdname
-train_double_poisson <- function(teams, train_data) {
+# train_double_poisson(team_data = team_data, train_data = wcmatches_train)
+train_double_poisson <- function(team_data, train_data) {
 
   # mod_elo <- glm(goals ~ team + elo.x, family = poisson(link = log), data = train_data)
   # mod_fifa <- glm(goals ~ team + fifa_start, family = poisson(link = log), data = train_data)
   mod <- glm(goals ~ elo + fifa_start, family = poisson(link = log), data = train_data)
   
-  #-----------
-  teams$lambda <- NA
-  #for (i in teams$name) {
-  #  teams$lambda[match(i, teams$name)] <-
-  #    predict(mod,
-  #            data.frame(
-  #              elo = teams$elo[match(i, teams$name)],
-  #              fifa_start = teams$fifa_start[match(i, teams$name)]
-  #            ),
-  #            type = "response"
-  #    )    
-  #}  
-  teams$lambda <- predict(mod, 
-                          newdata = select(teams, elo, fifa_start), 
+  team_data$lambda <- NA
+  team_data$lambda <- predict(mod, 
+                          newdata = select(team_data, elo, fifa_start), 
                           type = "response")
   
-  return(teams)
+  return(team_data)
 
 }
 
 #' @rdname
-play_fun_double_poisson <- function(teams, team1, team2, train_data) {
-  assert_that(length(team1) == length(team2), 
-              msg = "Lengths of team should be the same")
+play_fun_double_poisson <- function(team_data, team1, team2, train_data = wcmatches_train, ...) {
+
+  mod <- glm(goals ~ elo + fifa_start, family = poisson(link = log), data = train_data)
+  
+  team_data$lambda <- NA
+  team_data$lambda <- predict(mod, 
+                              newdata = select(team_data, elo, fifa_start), 
+                              type = "response")
   
   # Double poisson regressions in a match
-  teams <- train_double_poisson(teams = teams, train_data = train_data) #wcmatches_train
+  #team_data <- train_double_poisson(team_data = team_data, train_data = train_data) #wcmatches_train
   
   # lambda1 and 2 are mean of team1 and 2
   # selected by number i.e. row id
   # trained from train_double_poisson() 
-  lambda1 <- teams$lambda[team1]
-  lambda2 <- teams$lambda[team2]
+  lambda1 <- team_data$lambda[team1]
+  lambda2 <- team_data$lambda[team2]
   
   Agoals <- rpois(length(team1), lambda = lambda1) 
   Bgoals <- rpois(length(team2), lambda = lambda2)
