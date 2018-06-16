@@ -8,10 +8,10 @@ params:
 
 <img src="pics/cover2.jpg" alt="drawing" style="width: 1000px; height: 400px"/>
 
-The UEFA Champion League final a few weeks ago beteween Real Madrid and Liverpool was the only match I watched properly in over ten years. How dare I supposed to guess Brazil is going to lift the trophy in World Cup 2018? If you find the below dry to read, it is because of my limited natural language on the subject matter. Data science tricks to the rescue :)  
+The UEFA Champion League final a few weeks ago beteween Real Madrid and Liverpool was the only match I watched properly in over ten years. How dare I supposed to guess Brazil is going to lift the trophy in World Cup 2018? If you find the below dry to read, it is because of my limited natural language on the subject matter. Data science tricks to the rescue :) 
 
 
-> This blogpost is largely based on the prediction framework by an eRum 2018 talk from Claus Thorn Ekstrøm. For first hand materials please direct to [slides](http://www.biostatistics.dk/talks/eRum2018/#1), [video](https://www.youtube.com/watch?v=urJ1obHPsV8) and [code](github.com/ekstroem/socceR2018).
+> This blogpost is largely based on the prediction framework by an eRum 2018 talk from Claus Thorn Ekstrøm. For first hand materials please direct to [slides](http://www.biostatistics.dk/talks/eRum2018/#1), [video](https://www.youtube.com/watch?v=urJ1obHPsV8) and [code](github.com/ekstroem/socceR2018). 
 
 The idea is that in each simulation run of a tournament, we find team winner, runners-up, third	and fourth etc. N times of simulation runs e.g. 10k returns a list of winners with highest probability to be ranked top. 
 
@@ -20,13 +20,15 @@ Apart from the winner question, this blogpost seeks to answer which team will be
 
 # Initialization
 
-To begin with, we load packages including accompnying R package `worldcup` where my utility functions reside. Package is a convenient way to share code, seal utility functions and speed up iteration. Global parameters **normalgoals** (The average number of goals scored in a world cup match) and **nsim** (number of simulations) are declared in the YAML section at the top of the R Markdown document.  
+The R code is written and shipped in the `dataMod.Rmd` R Markdown document. To reproduce the analysis, I would suggest that you download or clone the repository and run through [that doc](https://github.com/MangoTheCat/blog_worldcup2018/blob/master/dataMod.Rmd).
+
+To begin with, we load packages including accompnying R package `worldcup` where my utility functions reside. Package is a convenient way to share code, seal utility functions and speed up iteration. Global parameters **normalgoals** (The average number of goals scored in a world cup match) and **nsim** (number of simulations) are declared in the YAML section at the top of `dataMod.Rmd`.  
 
 Next we load three datasets that have been tidied up from open source resource or updated from original version. Plenty of time was spent on gathering data, aligning team names and cleaning up features. 
 
 * `team_data` contains features associated with team
 * `group_match_data` is match schedule, public
-* `wcmatches_train` is a match dataset available on [this Kaggle competetion](https://www.kaggle.com/abecklas/fifa-world-cup/data), can be used as training set to estimate parameter lamda i.e. the average goals scored in a match for a single team. Records from 1994 up to 2014 are kept in the training set.
+* `wcmatches_train` is a processed dataset originated from [this Kaggle competetion](https://www.kaggle.com/abecklas/fifa-world-cup/data), can be used as training set to estimate parameter lamda i.e. the average goals scored in a match for a single team. Records from 1994 up to 2014 are kept in the training set.
 
 
 ```{r load, message=FALSE, warning=FALSE}

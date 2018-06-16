@@ -5,7 +5,7 @@ Another Prediction of FIFA World Cup 2018
 
 The UEFA Champion League final a few weeks ago beteween Real Madrid and Liverpool was the only match I watched properly in over ten years. How dare I supposed to guess Brazil is going to lift the trophy in World Cup 2018? If you find the below dry to read, it is because of my limited natural language on the subject matter. Data science tricks to the rescue :)
 
-> This blogpost is largely based on the prediction framework by an eRum 2018 talk from Claus Thorn Ekstrøm. For first hand materials please direct to [slides](http://www.biostatistics.dk/talks/eRum2018/#1), [video](https://www.youtube.com/watch?v=urJ1obHPsV8) and [code](github.com/ekstroem/socceR2018).
+> This blogpost is largely based on the prediction framework by an eRum 2018 talk from Claus Thorn EkstrÃ¸m. For first hand materials please direct to [slides](http://www.biostatistics.dk/talks/eRum2018/#1), [video](https://www.youtube.com/watch?v=urJ1obHPsV8) and [code](github.com/ekstroem/socceR2018).
 
 The idea is that in each simulation run of a tournament, we find team winner, runners-up, third and fourth etc. N times of simulation runs e.g. 10k returns a list of winners with highest probability to be ranked top.
 
@@ -14,13 +14,15 @@ Apart from the winner question, this blogpost seeks to answer which team will be
 Initialization
 ==============
 
-To begin with, we load packages including accompnying R package `worldcup` where my utility functions reside. Package is a convenient way to share code, seal utility functions and speed up iteration. Global parameters **normalgoals** (The average number of goals scored in a world cup match) and **nsim** (number of simulations) are declared in the YAML section at the top of the R Markdown document.
+The R code is written and shipped in the `dataMod.Rmd` R Markdown document. To reproduce the analysis, I would suggest that you download or clone the repository and run through [that doc](https://github.com/MangoTheCat/blog_worldcup2018/blob/master/dataMod.Rmd).
+
+To begin with, we load packages including accompnying R package `worldcup` where my utility functions reside. Package is a convenient way to share code, seal utility functions and speed up iteration. Global parameters **normalgoals** (The average number of goals scored in a world cup match) and **nsim** (number of simulations) are declared in the YAML section at the top of `dataMod.Rmd`.
 
 Next we load three datasets that have been tidied up from open source resource or updated from original version. Plenty of time was spent on gathering data, aligning team names and cleaning up features.
 
 -   `team_data` contains features associated with team
 -   `group_match_data` is match schedule, public
--   `wcmatches_train` is a match dataset available on [this Kaggle competetion](https://www.kaggle.com/abecklas/fifa-world-cup/data), can be used as training set to estimate parameter lamda i.e. the average goals scored in a match for a single team. Records from 1994 up to 2014 are kept in the training set.
+-   `wcmatches_train` is a processed dataset originated from [this Kaggle competetion](https://www.kaggle.com/abecklas/fifa-world-cup/data), can be used as training set to estimate parameter lamda i.e. the average goals scored in a match for a single team. Records from 1994 up to 2014 are kept in the training set.
 
 ``` r
 library(tidyverse)
@@ -52,7 +54,7 @@ play_game(play_fun = "play_fun_simplest",
 ```
 
     ##      Agoals Bgoals
-    ## [1,]      0      1
+    ## [1,]      1      3
 
 ``` r
 play_game(team_data = team_data, play_fun = "play_fun_skellam", 
@@ -61,7 +63,7 @@ play_game(team_data = team_data, play_fun = "play_fun_skellam",
 ```
 
     ##      Agoals Bgoals
-    ## [1,]      1      4
+    ## [1,]      0      2
 
 ``` r
 play_game(team_data = team_data, play_fun = "play_fun_elo", 
@@ -69,7 +71,7 @@ play_game(team_data = team_data, play_fun = "play_fun_elo",
 ```
 
     ##      Agoals Bgoals
-    ## [1,]      0      1
+    ## [1,]      1      0
 
 ``` r
 play_game(team_data = team_data, train_data = wcmatches_train, 
@@ -78,7 +80,7 @@ play_game(team_data = team_data, train_data = wcmatches_train,
 ```
 
     ##      Agoals Bgoals
-    ## [1,]      2      2
+    ## [1,]      0      1
 
 Estimate poisson mean from training
 ===================================
@@ -112,27 +114,25 @@ find_group_winners(team_data = team_data,
   filter(groupRank %in% c(1,2)) %>% collect()
 ```
 
-    ## Warning: package 'bindrcpp' was built under R version 3.4.4
-
     ## # A tibble: 16 x 11
-    ##    number name         group  rating   elo fifa_start points goalsFore
-    ##     <int> <chr>        <chr>   <dbl> <dbl>      <dbl>  <dbl>     <int>
-    ##  1      2 Russia       A       41.0   1685        493   7.00         5
-    ##  2      3 Saudi Arabia A     1001     1582        462   5.00         4
-    ##  3      7 Portugal     B       26.0   1975       1306   7.00         6
-    ##  4      6 Morocco      B      501     1711        681   4.00         2
-    ##  5     12 Peru         C      201     1906       1106   5.00         3
-    ##  6     11 France       C        7.50  1984       1166   5.00         6
-    ##  7     13 Argentina    D       10.0   1985       1254   9.00         8
-    ##  8     15 Iceland      D      201     1787        930   6.00         4
-    ##  9     17 Brazil       E        5.00  2131       1384   7.00         8
-    ## 10     20 Serbia       E      201     1770        732   6.00         4
-    ## 11     21 Germany      F        5.50  2092       1544   6.00         8
-    ## 12     24 Sweden       F      151     1796        889   6.00         5
-    ## 13     27 Panama       G     1001     1669        574   5.00         3
-    ## 14     25 Belgium      G       12.0   1931       1346   5.00         4
-    ## 15     31 Poland       H       51.0   1831       1128   4.00         2
-    ## 16     29 Colombia     H       41.0   1935        989   4.00         1
+    ##    number name        group rating   elo fifa_start points goalsFore
+    ##     <int> <chr>       <chr>  <dbl> <dbl>      <dbl>  <dbl>     <int>
+    ##  1      1 Egypt       A      151    1646        636      7         7
+    ##  2      2 Russia      A       41    1685        493      4         4
+    ##  3      6 Morocco     B      501    1711        681      6         2
+    ##  4      8 Spain       B        7    2048       1162      6         7
+    ##  5     11 France      C        7.5  1984       1166      9         9
+    ##  6     12 Peru        C      201    1906       1106      4         5
+    ##  7     14 Croatia     D       34    1853        975      7         7
+    ##  8     16 Nigeria     D      201    1699        635      4         4
+    ##  9     17 Brazil      E        5    2131       1384      6         6
+    ## 10     19 Switzerland E      101    1879       1179      6         4
+    ## 11     21 Germany     F        5.5  2092       1544      9         5
+    ## 12     22 South Korea F      751    1746        520      6         3
+    ## 13     25 Belgium     G       12    1931       1346      6         6
+    ## 14     27 Panama      G     1001    1669        574      4         4
+    ## 15     30 Japan       H      301    1693        528      5         2
+    ## 16     32 Senegal     H      201    1747        825      4         5
     ## # ... with 3 more variables: goalsAgainst <int>, goalsDifference <int>,
     ## #   groupRank <int>
 
@@ -144,8 +144,8 @@ find_knockout_winners(team_data = team_data,
 ```
 
     ##   team1 team2 goals1 goals2
-    ## 1     3    10      2      2
-    ## 2     8    13      1      2
+    ## 1     3    10      0      4
+    ## 2     8    13      1      1
 
 Run the tournament
 ==================
